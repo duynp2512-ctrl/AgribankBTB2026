@@ -2,12 +2,12 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Hệ thống Ôn thi và Kiểm tra Nghiệp vụ Agribank</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         :root { --agri-maroon: #800000; --agri-hover: #660000; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f3f4f6; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f3f4f6; overflow: hidden; overscroll-behavior-y: none; }
         .bg-agri { background-color: var(--agri-maroon); }
         .text-agri { color: var(--agri-maroon); }
         .border-agri { border-color: var(--agri-maroon); }
@@ -16,8 +16,18 @@
         .fade-in { animation: fadeIn 0.3s ease-in-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
+        /* Nút tùy chọn Giao diện (PC / Mobile) */
+        .mode-btn { cursor: pointer; padding: 8px 16px; border-radius: 8px; font-weight: bold; border: 2px solid #e5e7eb; color: #4b5563; transition: 0.2s; }
+        .mode-btn.active { border-color: var(--agri-maroon); background-color: #fff1f2; color: var(--agri-maroon); }
+
+        /* CSS MẶC ĐỊNH (Cho PC) */
+        .opt-btn { width: 100%; text-align: left; padding: 12px 16px; border: 2px solid #e5e7eb; border-radius: 8px; margin-bottom: 10px; transition: 0.2s; font-weight: 500; background: white; white-space: normal; word-break: break-word; }
+        .opt-btn:not(:disabled):hover { border-color: #9ca3af; background-color: #f9fafb; cursor: pointer; }
+        .opt-btn.correct-ans { border-color: #10b981 !important; background-color: #d1fae5 !important; color: #065f46; font-weight: bold; }
+        .opt-btn.wrong-ans { border-color: #ef4444 !important; background-color: #fee2e2 !important; color: #991b1b; }
+        
         .nav-grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 6px; }
-        .nav-btn { height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 4px; border: 1px solid #d1d5db; font-size: 12px; font-weight: 500; cursor: pointer; transition: 0.2s; background: white;}
+        .nav-btn { height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 4px; border: 1px solid #d1d5db; font-size: 13px; font-weight: 600; cursor: pointer; transition: 0.2s; background: white;}
         .nav-btn:hover { background-color: #f3f4f6; }
         .nav-btn.active { outline: 2px solid var(--agri-maroon); outline-offset: 1px; }
         .nav-btn.answered { background-color: #9ca3af; color: white; border-color: #6b7280; }
@@ -25,118 +35,150 @@
         .nav-btn.wrong { background-color: #ef4444; color: white; border-color: #dc2626; }
         .nav-btn.unanswered { background-color: #d1d5db; color: #4b5563; }
 
-        .opt-btn { width: 100%; text-align: left; padding: 12px 16px; border: 2px solid #e5e7eb; border-radius: 8px; margin-bottom: 10px; transition: 0.2s; font-weight: 500; background: white; }
-        .opt-btn:not(:disabled):hover { border-color: #9ca3af; background-color: #f9fafb; cursor: pointer; }
-        .opt-btn.correct-ans { border-color: #10b981 !important; background-color: #d1fae5 !important; color: #065f46; font-weight: bold; }
-        .opt-btn.wrong-ans { border-color: #ef4444 !important; background-color: #fee2e2 !important; color: #991b1b; }
+        /* ========================================================
+           CHẾ ĐỘ SIÊU NÉN CHO ĐIỆN THOẠI (COMPACT MODE) 
+           ======================================================== */
+        body.compact-mode .opt-btn { 
+            padding: 6px 10px; /* Giảm độ dày nút */
+            margin-bottom: 6px; /* Ép các nút sát nhau */
+            font-size: 13.5px; /* Chữ nhỏ lại vừa đủ đọc */
+            line-height: 1.3; 
+            border-radius: 6px;
+        }
+        body.compact-mode #qContentText { font-size: 15px; line-height: 1.4; }
+        body.compact-mode .q-title-box { margin-bottom: 12px !important; }
+        body.compact-mode #view-exam { padding: 4px !important; gap: 4px !important; }
+        body.compact-mode .exam-inner-box { padding: 12px !important; }
+        body.compact-mode .exam-bottom-bar { padding: 6px 12px !important; }
+        body.compact-mode .exam-bottom-bar button { padding: 6px 12px !important; font-size: 13px; }
+        body.compact-mode #qExplanation { padding: 8px !important; font-size: 12px; margin-top: 8px !important; }
+        body.compact-mode .nav-grid { gap: 3px; }
+        body.compact-mode .nav-btn { height: 24px; font-size: 11px; }
+        body.compact-mode #sidebarGrid { padding: 8px !important; }
     </style>
 </head>
-<body class="flex flex-col h-screen overflow-hidden text-gray-800">
+<body class="flex flex-col h-screen text-gray-800">
 
-    <header class="bg-agri text-white shadow-md z-10 shrink-0">
-        <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center flex-wrap gap-4">
-            <div class="flex items-center gap-3 cursor-pointer" onclick="goHome()">
-         <img src="logo.png" alt="Logo" class="max-h-12 bg-white p-1 rounded">
-                <div>
-                    <h1 class="text-xl md:text-2xl font-bold leading-tight">Agribank chi nhánh Bắc Thái Bình</h1>
-                    <p class="text-sm md:text-base opacity-90">Hệ thống Ôn thi Nghiệp vụ</p>
+   <header id="mainHeader" class="bg-agri text-white shadow-md z-10 shrink-0">
+        <div class="max-w-7xl mx-auto px-2 md:px-4 py-1.5 md:py-2 flex justify-between items-center gap-1 md:gap-2">
+            
+            <div class="flex items-center gap-1.5 md:gap-2 cursor-pointer overflow-hidden" onclick="goHome()">
+                <img src="https://upload.wikimedia.org/wikipedia/vi/1/1d/Logo_Agribank.svg" alt="Logo" class="h-6 md:h-10 bg-white p-0.5 md:p-1 rounded shrink-0">
+                
+                <div class="truncate">
+                    <h1 class="text-[12px] md:text-xl font-bold leading-tight truncate">Agribank Bắc Thái Bình</h1>
+                    <p class="text-[9px] md:text-sm opacity-90 truncate">Hệ thống Ôn thi Nghiệp vụ</p>
                 </div>
             </div>
-            <div class="flex items-center gap-2 text-sm bg-white/20 px-4 py-2 rounded-full font-medium">
+
+            <div class="text-[9px] md:text-sm bg-white/20 px-2 md:px-3 py-1 md:py-1.5 rounded-full font-medium shrink-0">
                 Hỗ trợ: Mr. Duy - 0966.555.692
             </div>
         </div>
     </header>
 
-    <main class="flex-1 overflow-y-auto relative">
+    <main class="flex-1 overflow-y-auto relative bg-gray-100">
         
         <div id="view-loading" class="flex flex-col items-center justify-center h-full">
             <svg class="animate-spin h-10 w-10 text-agri mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-            <h2 id="loading-text" class="text-xl font-bold text-gray-700">Đang tải hệ thống câu hỏi...</h2>
+            <h2 class="text-lg md:text-xl font-bold text-gray-700">Đang đồng bộ dữ liệu...</h2>
+            <p class="text-sm text-gray-500 mt-2">Vui lòng đợi trong giây lát</p>
         </div>
 
-        <div id="view-home" class="max-w-7xl mx-auto p-4 md:p-6 hide fade-in">
-            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 mb-8">
-                <h3 class="font-bold text-gray-700 mb-3 text-lg">🔍 Tra Cứu Nhanh Câu Hỏi</h3>
-                <div class="flex gap-2">
-                    <input type="text" id="searchInput" placeholder="Nhập từ khóa... (VD: bảo lãnh * nghĩa vụ)" class="flex-1 border border-gray-300 p-3 rounded-lg focus:outline-none focus:border-agri focus:ring-1 focus:ring-agri">
-                    <button onclick="handleSearch()" class="bg-agri hover-bg-agri text-white px-8 py-3 rounded-lg font-bold transition">Tìm kiếm</button>
+        <div id="view-setup" class="max-w-4xl mx-auto mt-6 p-6 bg-white rounded-xl shadow-lg hide fade-in m-4">
+            <h2 class="text-xl font-bold text-red-600 mb-2 border-b pb-2">⚠️ Chế độ Ngoại tuyến (Offline)</h2>
+            <p class="mb-6 text-sm text-gray-600">Hệ thống không tìm thấy file trên mạng. Vui lòng tải 2 file TXT trực tiếp từ máy của bạn để tiếp tục. (Chỉ cần làm 1 lần).</p>
+            <div class="flex flex-col md:flex-row gap-4 mb-6">
+                <div class="flex-1 border-2 border-dashed border-blue-300 p-4 text-center rounded bg-blue-50">
+                    <h3 class="font-bold text-blue-800 text-sm">1. File Chuyên đề</h3>
+                    <input type="file" id="uploadSpec" accept=".txt,.json" class="mt-2 text-xs w-full">
                 </div>
-                <div id="searchResults" class="mt-4 space-y-4 max-h-96 overflow-y-auto"></div>
+                <div class="flex-1 border-2 border-dashed border-green-300 p-4 text-center rounded bg-green-50">
+                    <h3 class="font-bold text-green-800 text-sm">2. File Kiến thức chung</h3>
+                    <input type="file" id="uploadGen" accept=".txt,.json" class="mt-2 text-xs w-full">
+                </div>
+            </div>
+            <button onclick="saveManualFiles()" class="w-full bg-agri text-white font-bold py-3 rounded-lg shadow transition">Nạp Dữ Liệu</button>
+        </div>
+
+        <div id="view-home" class="max-w-7xl mx-auto p-3 md:p-6 hide fade-in">
+            
+            <div class="bg-white p-4 rounded-xl shadow-sm mb-4 border border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div>
+                    <h3 class="font-bold text-gray-800">Tùy chỉnh Giao diện:</h3>
+                    <p class="text-xs text-gray-500">Kích hoạt chế độ Điện thoại để nội dung ôn tập ôm sát màn hình, không cần vuốt.</p>
+                </div>
+                <div class="flex bg-gray-100 p-1 rounded-lg gap-1 w-full sm:w-auto">
+                    <div id="btnModePC" onclick="setCompactMode(false)" class="mode-btn flex-1 text-center active text-sm">💻 PC / Tablet</div>
+                    <div id="btnModeMobile" onclick="setCompactMode(true)" class="mode-btn flex-1 text-center text-sm">📱 ĐTDĐ 6.5"</div>
+                </div>
             </div>
 
-            <h2 class="text-2xl font-bold text-agri mb-6">Danh sách Chuyên đề Ôn tập</h2>
-            <div id="categoriesGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 pb-12"></div>
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 mb-6">
+                <h3 class="font-bold text-gray-700 mb-2 text-sm md:text-base">🔍 Tra Cứu Nhanh</h3>
+                <div class="flex gap-2">
+                    <input type="text" id="searchInput" placeholder="Nhập từ khóa (VD: bảo lãnh * nghĩa vụ)" class="flex-1 border border-gray-300 p-2 md:p-3 rounded-lg text-sm focus:border-agri outline-none">
+                    <button onclick="handleSearch()" class="bg-agri text-white px-4 md:px-8 py-2 md:py-3 rounded-lg font-bold text-sm">Tìm</button>
+                </div>
+                <div id="searchResults" class="mt-4 space-y-3 max-h-60 overflow-y-auto"></div>
+            </div>
+
+            <h2 class="text-lg md:text-xl font-bold text-agri mb-4">Danh sách Chuyên đề Ôn tập</h2>
+            <div id="categoriesGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-5 pb-8"></div>
         </div>
 
-        <div id="view-exam" class="max-w-7xl mx-auto p-4 md:p-6 h-full hide fade-in flex flex-col lg:flex-row gap-6">
-            <div class="flex-1 flex flex-col bg-white rounded-xl shadow-sm border border-gray-200 h-full max-h-[85vh]">
-                <div class="bg-gray-50 p-4 border-b flex justify-between items-center rounded-t-xl shrink-0">
-                    <div>
-                        <span id="modeBadge" class="font-bold text-xs px-3 py-1 rounded-full border"></span>
-                        <span id="catTitle" class="ml-2 font-semibold text-gray-700 hidden sm:inline"></span>
+        <div id="view-exam" class="absolute inset-0 z-50 bg-gray-200 p-2 md:p-6 hide fade-in flex flex-col lg:flex-row gap-2 md:gap-6">
+            
+            <div class="w-full flex-1 flex flex-col bg-white rounded-lg shadow-md border border-gray-300 overflow-hidden h-full">
+                
+                <div class="bg-gray-50 p-2 md:p-4 border-b flex justify-between items-center shrink-0">
+                    <div class="flex items-center gap-2 truncate">
+                        <button onclick="goHome()" class="px-2 md:px-3 py-1 bg-gray-200 hover:bg-gray-300 rounded text-xs font-bold text-gray-700">✖ THOÁT</button>
+                        <span id="modeBadge" class="font-bold text-[10px] md:text-xs px-2 py-0.5 rounded border uppercase"></span>
+                        <span id="catTitle" class="font-semibold text-gray-700 text-xs md:text-sm truncate hidden sm:inline"></span>
                     </div>
-                    <div id="timerContainer" class="font-mono text-xl font-bold text-red-600 flex items-center gap-2 hide">
+                    <div id="timerContainer" class="font-mono text-sm md:text-lg font-bold text-red-600 flex items-center shrink-0 hide">
                         ⏱️ <span id="timerText">45:00</span>
                     </div>
                 </div>
 
-                <div class="p-4 md:p-6 flex-1 overflow-y-auto">
-                    
-                    <h3 class="text-base md:text-xl font-bold text-gray-800 mb-4 md:mb-6 leading-relaxed">
+                <div class="exam-inner-box p-3 md:p-6 flex-1 overflow-y-auto flex flex-col">
+                    <h3 class="q-title-box text-base md:text-xl font-bold text-gray-800 mb-4 leading-snug break-words shrink-0">
                         <span class="text-agri">Câu <span id="qIndexText">1</span>:</span> <span id="qContentText"></span>
                     </h3>
                     
-                    <div id="qOptionsContainer" class="space-y-2"></div>
+                    <div id="qOptionsContainer" class="w-full shrink-0"></div>
                     
-                    <div id="qExplanation" class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-500 rounded text-xs md:text-sm text-blue-900 hide">
-                        <span class="font-bold">💡 Trích dẫn nguồn:</span> <span id="qSourceText"></span>
+                    <div id="qExplanation" class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-500 rounded text-xs md:text-sm text-blue-900 break-words hide shrink-0">
+                        <span class="font-bold">💡 Nguồn:</span> <span id="qSourceText"></span>
                     </div>
                 </div>
 
-                <div class="p-4 border-t bg-gray-50 rounded-b-xl shrink-0 flex justify-between items-center">
-                    <button onclick="prevQuestion()" class="px-5 py-2 bg-white border rounded font-semibold text-gray-600 hover:bg-gray-100">⬅ Trước</button>
-                    <button id="btnSubmitExam" onclick="submitExam()" class="px-8 py-2 bg-agri text-white rounded font-bold hover-bg-agri hide">NỘP BÀI</button>
-                    <button onclick="nextQuestion()" class="px-5 py-2 bg-agri text-white rounded font-semibold hover-bg-agri">Tiếp ➡</button>
+                <div class="exam-bottom-bar p-3 border-t bg-gray-50 shrink-0 flex justify-between items-center gap-2">
+                    <button onclick="prevQuestion()" class="flex-1 py-2 bg-white border border-gray-400 rounded font-bold text-gray-600 hover:bg-gray-100 text-sm">⬅ TRƯỚC</button>
+                    <button id="btnSubmitExam" onclick="submitExam()" class="flex-1 py-2 bg-red-600 text-white rounded font-bold hover:bg-red-700 hide text-sm">NỘP BÀI</button>
+                    <button onclick="nextQuestion()" class="flex-1 py-2 bg-agri text-white rounded font-bold hover-bg-agri text-sm">TIẾP ➡</button>
                 </div>
             </div>
 
-            <div id="sidebarGrid" class="w-full lg:w-80 bg-white rounded-xl shadow-sm border border-gray-200 p-5 shrink-0 flex flex-col h-full max-h-[85vh] hide">
-                <h3 class="font-bold text-gray-700 mb-4 border-b pb-2 text-center">BẢNG ĐIỀU HƯỚNG</h3>
-                <div class="nav-grid flex-1 overflow-y-auto pr-1" id="navGridContainer"></div>
-                <div id="gridLegend" class="mt-4 pt-4 border-t text-xs space-y-2 shrink-0 hide">
-                    <div class="flex items-center gap-2"><div class="w-4 h-4 bg-[#10b981] rounded"></div> Trả lời đúng</div>
-                    <div class="flex items-center gap-2"><div class="w-4 h-4 bg-[#ef4444] rounded"></div> Trả lời sai</div>
-                    <div class="flex items-center gap-2"><div class="w-4 h-4 bg-[#d1d5db] rounded"></div> Chưa làm</div>
-                </div>
+            <div id="sidebarGrid" class="w-full lg:w-80 bg-white rounded-lg shadow-md border border-gray-300 p-3 shrink-0 flex flex-col h-[20vh] lg:h-full hide">
+                <div class="nav-grid flex-1 overflow-y-auto" id="navGridContainer"></div>
             </div>
         </div>
 
-        <div id="view-result" class="max-w-3xl mx-auto p-4 md:p-6 h-full hide fade-in">
-            <div class="bg-white p-8 rounded-xl shadow-lg text-center border-t-8 border-agri">
-                <h2 class="text-3xl font-bold text-gray-800 mb-2">Kết Quả Bài Thi</h2>
-                <p class="text-gray-500 mb-8" id="resultCatName"></p>
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-                    <div class="p-4 bg-gray-50 rounded-lg border">
-                        <div class="text-sm text-gray-500 font-semibold">ĐIỂM SỐ</div>
-                        <div class="text-3xl font-bold text-agri" id="resScore">0</div>
-                    </div>
-                    <div class="p-4 bg-green-50 rounded-lg border border-green-100">
-                        <div class="text-sm text-green-600 font-semibold">SỐ CÂU ĐÚNG</div>
-                        <div class="text-3xl font-bold text-green-600" id="resCorrect">0</div>
-                    </div>
-                    <div class="p-4 bg-red-50 rounded-lg border border-red-100">
-                        <div class="text-sm text-red-600 font-semibold">SỐ CÂU SAI</div>
-                        <div class="text-3xl font-bold text-red-600" id="resWrong">0</div>
-                    </div>
-                    <div class="p-4 bg-blue-50 rounded-lg border border-blue-100">
-                        <div class="text-sm text-blue-600 font-semibold">THỜI GIAN</div>
-                        <div class="text-2xl font-bold text-blue-600 mt-1" id="resTime">00:00</div>
-                    </div>
+        <div id="view-result" class="max-w-2xl mx-auto p-4 md:p-6 h-full hide fade-in flex items-center">
+            <div class="bg-white p-6 rounded-xl shadow-lg text-center border-t-8 border-agri w-full">
+                <h2 class="text-2xl font-bold text-gray-800 mb-1">Kết Quả Bài Thi</h2>
+                <p class="text-gray-500 text-sm mb-6" id="resultCatName"></p>
+                <div class="grid grid-cols-2 gap-3 mb-6">
+                    <div class="p-3 bg-gray-50 rounded border"><div class="text-[11px] text-gray-500 font-bold">ĐIỂM SỐ</div><div class="text-2xl font-bold text-agri" id="resScore">0</div></div>
+                    <div class="p-3 bg-green-50 rounded border border-green-100"><div class="text-[11px] text-green-600 font-bold">CÂU ĐÚNG</div><div class="text-2xl font-bold text-green-600" id="resCorrect">0</div></div>
+                    <div class="p-3 bg-red-50 rounded border border-red-100"><div class="text-[11px] text-red-600 font-bold">CÂU SAI</div><div class="text-2xl font-bold text-red-600" id="resWrong">0</div></div>
+                    <div class="p-3 bg-blue-50 rounded border border-blue-100"><div class="text-[11px] text-blue-600 font-bold">THỜI GIAN</div><div class="text-xl font-bold text-blue-600 mt-1" id="resTime">00:00</div></div>
                 </div>
-                <div class="flex gap-4 justify-center">
-                    <button onclick="reviewExam()" class="px-8 py-3 bg-gray-800 text-white font-bold rounded-lg hover:bg-gray-900 shadow">Xem chi tiết bài làm</button>
-                    <button onclick="goHome()" class="px-8 py-3 border-2 border-agri text-agri font-bold rounded-lg hover:bg-red-50">Về Trang Chủ</button>
+                <div class="flex flex-col sm:flex-row gap-3">
+                    <button onclick="reviewExam()" class="flex-1 py-3 bg-gray-800 text-white font-bold rounded shadow text-sm">Xem lại bài làm</button>
+                    <button onclick="goHome()" class="flex-1 py-3 border-2 border-agri text-agri font-bold rounded hover:bg-red-50 text-sm">Về Trang Chủ</button>
                 </div>
             </div>
         </div>
@@ -162,16 +204,31 @@ let examTimer = null;
 let secondsRemaining = 45 * 60; 
 let timeTaken = 0;
 
-// === FETCH DATA TỰ ĐỘNG TỪ GITHUB SAU ĐÓ RENDER LÊN MÀN HÌNH CHÍNH ===
+// === KHỞI TẠO HỆ THỐNG & KÉO DỮ LIỆU ===
 window.onload = async () => {
+    // Tự động kiểm tra trên màn hình đt thì set Compact Mode
+    if(window.innerWidth < 768) setCompactMode(true);
+    
+    // Ưu tiên đọc từ LocalStorage (Offline mode)
+    const localSpec = localStorage.getItem('SPECIALIZED_DATA');
+    const localGen = localStorage.getItem('GENERAL_DATA');
+    
+    if (localSpec && localGen) {
+        specializedData = JSON.parse(localSpec);
+        generalData = JSON.parse(localGen);
+        renderCategories();
+        showView('view-home');
+        return;
+    }
+
+    // Nếu chưa có, thử tải từ GitHub
     try {
-        // Tự động kéo 2 file txt từ cùng thư mục trên GitHub
         const [resSpec, resGen] = await Promise.all([
             fetch('tong hop cac chuyen de.txt'),
             fetch('Kiến thức chung.txt')
         ]);
 
-        if (!resSpec.ok || !resGen.ok) throw new Error("File not found");
+        if (!resSpec.ok || !resGen.ok) throw new Error("File not found on Server");
 
         const specText = await resSpec.text();
         const genText = await resGen.text();
@@ -181,43 +238,77 @@ window.onload = async () => {
 
         specializedData = dataSpec.topics ? dataSpec.topics : dataSpec;
         generalData = dataGen.topics ? dataGen.topics : dataGen;
+        
+        // Lưu lại để lần sau load offline nhanh hơn
+        localStorage.setItem('SPECIALIZED_DATA', JSON.stringify(specializedData));
+        localStorage.setItem('GENERAL_DATA', JSON.stringify(generalData));
 
         renderCategories();
         showView('view-home');
     } catch (error) {
-        console.error(error);
-        document.getElementById('loading-text').innerHTML = "❌ Lỗi tải dữ liệu. Hãy chắc chắn bạn đã tải 2 file txt lên GitHub đúng tên.";
-        document.getElementById('loading-text').classList.add('text-red-600');
+        console.warn("Chạy offline hoặc sai tên file GitHub, chuyển sang chế độ nạp thủ công.");
+        showView('view-setup'); // Bật UI tải file dự phòng
     }
 };
 
+// Toggle Giao diện
+function setCompactMode(isCompact) {
+    const btnPC = document.getElementById('btnModePC');
+    const btnMobile = document.getElementById('btnModeMobile');
+    if (isCompact) {
+        document.body.classList.add('compact-mode');
+        btnMobile.classList.add('active');
+        btnPC.classList.remove('active');
+    } else {
+        document.body.classList.remove('compact-mode');
+        btnPC.classList.add('active');
+        btnMobile.classList.remove('active');
+    }
+}
+
+async function saveManualFiles() {
+    const fSpec = document.getElementById('uploadSpec').files[0];
+    const fGen = document.getElementById('uploadGen').files[0];
+    if (!fSpec || !fGen) return alert("Vui lòng chọn đủ 2 file để nạp dữ liệu.");
+    try {
+        const specText = await fSpec.text();
+        const genText = await fGen.text();
+        const dSpec = JSON.parse(specText);
+        const dGen = JSON.parse(genText);
+        localStorage.setItem('SPECIALIZED_DATA', JSON.stringify(dSpec.topics ? dSpec.topics : dSpec));
+        localStorage.setItem('GENERAL_DATA', JSON.stringify(dGen.topics ? dGen.topics : dGen));
+        alert("Nạp dữ liệu thành công!");
+        location.reload();
+    } catch (e) {
+        alert("Lỗi định dạng file JSON/TXT. Vui lòng kiểm tra lại.");
+    }
+}
+
 function showView(viewId) {
-    ['view-loading', 'view-home', 'view-exam', 'view-result'].forEach(id => {
+    ['view-loading', 'view-setup', 'view-home', 'view-exam', 'view-result'].forEach(id => {
         document.getElementById(id).classList.add('hide');
     });
     document.getElementById(viewId).classList.remove('hide');
+    // Ẩn Header chính khi vào thi để tiết kiệm diện tích trên đt
+    document.getElementById('mainHeader').style.display = (viewId === 'view-exam') ? 'none' : 'flex';
 }
 
 function goHome() {
     clearInterval(examTimer);
-    if(specializedData.length > 0) showView('view-home');
+    showView('view-home');
 }
 
 function renderCategories() {
     const grid = document.getElementById('categoriesGrid');
     grid.innerHTML = '';
-    
     CATEGORIES.forEach((cat, index) => {
         const isKTC = index === 15;
         grid.innerHTML += `
-            <div class="bg-white border p-5 rounded-xl shadow-sm hover:-translate-y-1 hover:shadow-md transition flex flex-col justify-between">
-                <div class="flex items-start gap-3 mb-6">
-                    <div class="p-2 bg-red-50 rounded-lg text-agri shrink-0">📚</div>
-                    <h3 class="font-bold text-gray-800 leading-snug">${cat}</h3>
-                </div>
+            <div class="bg-white border p-4 rounded-xl shadow-sm flex flex-col justify-between">
+                <h3 class="font-bold text-gray-800 text-sm mb-4 leading-snug break-words">${cat}</h3>
                 <div class="flex gap-2 mt-auto">
-                    <button onclick="startPractice('${cat}')" class="flex-1 bg-blue-50 text-blue-700 font-semibold py-2 rounded text-sm hover:bg-blue-100">📖 Ôn tập</button>
-                    ${!isKTC ? `<button onclick="startExam('${cat}')" class="flex-1 bg-red-50 text-red-700 font-semibold py-2 rounded text-sm hover:bg-red-100">⏱️ Thi thử</button>` : ''}
+                    <button onclick="startPractice('${cat}')" class="flex-1 bg-blue-50 text-blue-700 font-bold py-2 rounded text-xs border border-blue-200">📖 ÔN TẬP</button>
+                    ${!isKTC ? `<button onclick="startExam('${cat}')" class="flex-1 bg-red-50 text-red-700 font-bold py-2 rounded text-xs border border-red-200">⏱️ THI THỬ</button>` : ''}
                 </div>
             </div>
         `;
@@ -238,7 +329,6 @@ function handleSearch() {
 
     const keywords = input.split(/\*|\s+/).map(k => k.trim().toLowerCase()).filter(k => k);
     let allQs = [];
-    
     [...specializedData, ...generalData].forEach(topic => {
         if(topic.questions) topic.questions.forEach(q => allQs.push(q));
     });
@@ -249,21 +339,21 @@ function handleSearch() {
     }).slice(0, 50);
 
     if (matches.length === 0) {
-        resultDiv.innerHTML = '<p class="text-gray-500 italic p-4 text-center">Không tìm thấy câu hỏi phù hợp.</p>';
+        resultDiv.innerHTML = '<p class="text-xs text-gray-500 italic p-2 text-center">Không có câu hỏi phù hợp.</p>';
         return;
     }
 
     resultDiv.innerHTML = matches.map((q, i) => `
-        <div class="p-4 border rounded-lg bg-gray-50 text-sm">
-            <p class="font-bold text-gray-800 mb-3">${q.q}</p>
+        <div class="p-3 border rounded bg-gray-50 text-xs">
+            <p class="font-bold text-gray-800 mb-2">${q.q}</p>
             <div class="space-y-1">
                 ${q.choices.map((c, cIdx) => `
-                    <div class="p-2 rounded border ${cIdx === q.answer ? 'bg-green-100 border-green-500 font-bold text-green-800' : 'bg-white border-gray-200 text-gray-600'}">
+                    <div class="p-1.5 rounded border ${cIdx === q.answer ? 'bg-green-100 border-green-500 font-bold text-green-800' : 'bg-white text-gray-600'}">
                         ${String.fromCharCode(65 + cIdx)}. ${c}
                     </div>
                 `).join('')}
             </div>
-            <p class="mt-3 text-xs text-gray-500 italic">💡 Nguồn: ${q.source || 'Lưu hành nội bộ'}</p>
+            <p class="mt-2 text-[10px] text-gray-500 italic">💡 Nguồn: ${q.source || 'Lưu hành nội bộ'}</p>
         </div>
     `).join('');
 }
@@ -277,14 +367,12 @@ function extractQuestions(catName, isGeneral = false) {
 function startPractice(catName) {
     const isKTC = catName === CATEGORIES[15];
     currentQs = extractQuestions(catName, isKTC);
-    
     if (currentQs.length === 0) return alert(`Lỗi dữ liệu môn: ${catName}`);
 
-    appMode = 'practice';
-    currentQIndex = 0; userAnswers = {};
+    appMode = 'practice'; currentQIndex = 0; userAnswers = {};
 
     document.getElementById('modeBadge').innerText = "ÔN TẬP";
-    document.getElementById('modeBadge').className = "font-bold text-blue-700 uppercase text-xs bg-blue-100 px-3 py-1 rounded-full border border-blue-200";
+    document.getElementById('modeBadge').className = "font-bold text-blue-700 bg-blue-100 border-blue-200 text-[10px] md:text-xs px-2 py-0.5 rounded uppercase";
     document.getElementById('catTitle').innerText = catName;
     
     document.getElementById('sidebarGrid').classList.add('hide');
@@ -300,22 +388,19 @@ function startExam(catName) {
     
     let sPool = specQs.sort(() => 0.5 - Math.random()).slice(0, 75);
     let gPool = genQs.sort(() => 0.5 - Math.random()).slice(0, 25);
-    
     currentQs = [...sPool, ...gPool].sort(() => 0.5 - Math.random());
     
-    appMode = 'exam';
-    currentQIndex = 0; userAnswers = {};
+    appMode = 'exam'; currentQIndex = 0; userAnswers = {};
     secondsRemaining = 45 * 60; timeTaken = 0;
 
     document.getElementById('modeBadge').innerText = "THI THỬ";
-    document.getElementById('modeBadge').className = "font-bold text-red-700 uppercase text-xs bg-red-100 px-3 py-1 rounded-full border border-red-200";
+    document.getElementById('modeBadge').className = "font-bold text-red-700 bg-red-100 border-red-200 text-[10px] md:text-xs px-2 py-0.5 rounded uppercase";
     document.getElementById('catTitle').innerText = catName;
     document.getElementById('catTitle').dataset.catName = catName;
 
     document.getElementById('sidebarGrid').classList.remove('hide');
     document.getElementById('btnSubmitExam').classList.remove('hide');
     document.getElementById('timerContainer').classList.remove('hide');
-    document.getElementById('gridLegend').classList.add('hide');
 
     buildNavGrid(); startTimer(); showView('view-exam'); renderQuestion();
 }
@@ -335,7 +420,7 @@ function renderQuestion() {
     q.choices.forEach((choice, index) => {
         const btn = document.createElement('button');
         btn.className = 'opt-btn';
-        btn.innerHTML = `<span class="inline-block w-8 font-bold">${String.fromCharCode(65 + index)}.</span> ${choice}`;
+        btn.innerHTML = `<span class="inline-block w-6 font-bold text-gray-500">${String.fromCharCode(65 + index)}.</span> ${choice}`;
         
         if (hasAnswered) {
             btn.disabled = true;
@@ -426,18 +511,17 @@ function submitExam() {
     
     let m = Math.floor(timeTaken / 60); let s = timeTaken % 60;
     document.getElementById('resTime').innerText = `${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}`;
-    document.getElementById('resultCatName').innerText = "Chuyên đề: " + document.getElementById('catTitle').dataset.catName;
+    document.getElementById('resultCatName').innerText = "Môn: " + document.getElementById('catTitle').dataset.catName;
 
     showView('view-result');
 }
 
 function reviewExam() {
     appMode = 'review'; currentQIndex = 0;
-    document.getElementById('modeBadge').innerText = "XEM LẠI BÀI";
-    document.getElementById('modeBadge').className = "font-bold text-gray-700 text-xs bg-gray-200 px-3 py-1 rounded-full border";
+    document.getElementById('modeBadge').innerText = "REVIEW";
+    document.getElementById('modeBadge').className = "font-bold text-gray-700 bg-gray-200 text-[10px] md:text-xs px-2 py-0.5 rounded border";
     document.getElementById('btnSubmitExam').classList.add('hide');
     document.getElementById('timerContainer').classList.add('hide');
-    document.getElementById('gridLegend').classList.remove('hide');
     showView('view-exam'); renderQuestion();
 }
 </script>
