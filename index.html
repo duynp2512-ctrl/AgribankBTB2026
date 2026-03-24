@@ -215,7 +215,47 @@ window.onload = async () => {
     if(window.innerWidth < 768) setCompactMode(true);
     updateUIAuth();
 
-    await loadData();
+    const DATA_VERSION = "v2"; // 🔥 đổi mỗi khi sửa file txt
+
+    const localSpec = localStorage.getItem('SPECIALIZED_DATA');
+    const localGen = localStorage.getItem('GENERAL_DATA');
+    const localVer = localStorage.getItem('DATA_VERSION');
+
+    // ✅ Nếu version giống → dùng cache
+    if (localSpec && localGen && localVer === DATA_VERSION) {
+        specializedData = JSON.parse(localSpec);
+        generalData = JSON.parse(localGen);
+        renderCategories();
+        showView('view-home');
+        return;
+    }
+
+    try {
+        // ✅ THÊM ?v= để phá cache trình duyệt
+        const [resSpec, resGen] = await Promise.all([
+            fetch('tong hop cac chuyen de.txt?v=' + DATA_VERSION),
+            fetch('Kiến thức chung.txt?v=' + DATA_VERSION)
+        ]);
+
+        if (!resSpec.ok || !resGen.ok) throw new Error("Not found");
+
+        const textSpec = await resSpec.text();
+        const textGen = await resGen.text();
+
+        specializedData = JSON.parse(textSpec).topics || JSON.parse(textSpec);
+        generalData = JSON.parse(textGen).topics || JSON.parse(textGen);
+
+        // ✅ lưu cache + version
+        localStorage.setItem('SPECIALIZED_DATA', JSON.stringify(specializedData));
+        localStorage.setItem('GENERAL_DATA', JSON.stringify(generalData));
+        localStorage.setItem('DATA_VERSION', DATA_VERSION);
+
+        renderCategories();
+        showView('view-home');
+
+    } catch (e) {
+        showView('view-setup');
+    }
 };
 
 // ================= LOAD DATA (FIX CACHE FULL) =================
