@@ -205,7 +205,6 @@
     </main>
 
 <script>
-const DATA_VERSION = "v3"; // 🔥 mỗi lần sửa dữ liệu → đổi v3, v4...
 const ADMIN_SECRET = "Agribank@2026"; 
 
 // BỘ ĐẾM TOÀN CẦU DẠNG CHỮ
@@ -367,20 +366,17 @@ window.onload = async () => {
     updateUIAuth();
     const localSpec = localStorage.getItem('SPECIALIZED_DATA');
     const localGen = localStorage.getItem('GENERAL_DATA');
-   const localVer = localStorage.getItem('DATA_VERSION');
-
-if (localSpec && localGen && localVer === DATA_VERSION) {
+    if (localSpec && localGen) {
         specializedData = JSON.parse(localSpec); generalData = JSON.parse(localGen);
         renderCategories(); showView('view-home'); return;
     }
     try {
-        const [resSpec, resGen] = await Promise.all([fetch('tong hop cac chuyen de.txt?v=' + DATA_VERSION), fetch('Kiến thức chung.txt?v=' + DATA_VERSION)]);
+        const [resSpec, resGen] = await Promise.all([ fetch('tong hop cac chuyen de.txt'), fetch('Kiến thức chung.txt') ]);
         if (!resSpec.ok || !resGen.ok) throw new Error("Not found");
         specializedData = JSON.parse(await resSpec.text()).topics || JSON.parse(await resSpec.text());
         generalData = JSON.parse(await resGen.text()).topics || JSON.parse(await resGen.text());
         localStorage.setItem('SPECIALIZED_DATA', JSON.stringify(specializedData));
         localStorage.setItem('GENERAL_DATA', JSON.stringify(generalData));
-        localStorage.setItem('DATA_VERSION', DATA_VERSION);
         renderCategories(); showView('view-home');
     } catch (e) { showView('view-setup'); }
 };
