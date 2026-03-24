@@ -205,6 +205,7 @@
     </main>
 
 <script>
+const DATA_VERSION = "v2"; // 🔥 mỗi lần sửa dữ liệu → đổi v3, v4...
 const ADMIN_SECRET = "Agribank@2026"; 
 
 // BỘ ĐẾM TOÀN CẦU DẠNG CHỮ
@@ -366,7 +367,9 @@ window.onload = async () => {
     updateUIAuth();
     const localSpec = localStorage.getItem('SPECIALIZED_DATA');
     const localGen = localStorage.getItem('GENERAL_DATA');
-    if (localSpec && localGen) {
+   const localVer = localStorage.getItem('DATA_VERSION');
+
+if (localSpec && localGen && localVer === DATA_VERSION) {
         specializedData = JSON.parse(localSpec); generalData = JSON.parse(localGen);
         renderCategories(); showView('view-home'); return;
     }
@@ -377,6 +380,7 @@ window.onload = async () => {
         generalData = JSON.parse(await resGen.text()).topics || JSON.parse(await resGen.text());
         localStorage.setItem('SPECIALIZED_DATA', JSON.stringify(specializedData));
         localStorage.setItem('GENERAL_DATA', JSON.stringify(generalData));
+        localStorage.setItem('DATA_VERSION', DATA_VERSION);
         renderCategories(); showView('view-home');
     } catch (e) { showView('view-setup'); }
 };
