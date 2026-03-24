@@ -205,7 +205,7 @@
     </main>
 
 <script>
-const DATA_VERSION = "v2"; // 🔥 mỗi lần sửa dữ liệu → đổi v3, v4...
+const DATA_VERSION = "v3"; // 🔥 mỗi lần sửa dữ liệu → đổi v3, v4...
 const ADMIN_SECRET = "Agribank@2026"; 
 
 // BỘ ĐẾM TOÀN CẦU DẠNG CHỮ
@@ -374,7 +374,7 @@ if (localSpec && localGen && localVer === DATA_VERSION) {
         renderCategories(); showView('view-home'); return;
     }
     try {
-        const [resSpec, resGen] = await Promise.all([fetch('tong hop chuyen de.txt?v=' + DATA_VERSION), fetch('Kiến thức chung.txt?v=' + DATA_VERSION)]);
+        const [resSpec, resGen] = await Promise.all([fetch('tong hop cac chuyen de.txt?v=' + DATA_VERSION), fetch('Kiến thức chung.txt?v=' + DATA_VERSION)]);
         if (!resSpec.ok || !resGen.ok) throw new Error("Not found");
         specializedData = JSON.parse(await resSpec.text()).topics || JSON.parse(await resSpec.text());
         generalData = JSON.parse(await resGen.text()).topics || JSON.parse(await resGen.text());
