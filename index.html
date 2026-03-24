@@ -364,25 +364,15 @@ let examTimer = null; let secondsRemaining = 45 * 60; let timeTaken = 0;
 window.onload = async () => {
     if(window.innerWidth < 768) setCompactMode(true);
     updateUIAuth();
-    const DATA_VERSION = "v2"; // đổi mỗi khi update file txt
-
-const localVersion = localStorage.getItem('DATA_VERSION');
-
-if (localSpec && localGen && localVersion === DATA_VERSION) {
-    specializedData = JSON.parse(localSpec);
-    generalData = JSON.parse(localGen);
-    renderCategories();
-    showView('view-home');
-    return;
-}
+    const localSpec = localStorage.getItem('SPECIALIZED_DATA');
+    const localGen = localStorage.getItem('GENERAL_DATA');
+    if (localSpec && localGen) {
+        specializedData = JSON.parse(localSpec); generalData = JSON.parse(localGen);
+        renderCategories(); showView('view-home'); return;
+    }
     try {
-       const version = new Date().getTime();
-
-const [resSpec, resGen] = await Promise.all([
-    fetch(`tong hop cac chuyen de.txt?v=${version}`),
-    fetch(`Kiến thức chung.txt?v=${version}`)
-]);
-               if (!resSpec.ok || !resGen.ok) throw new Error("Not found");
+        const [resSpec, resGen] = await Promise.all([ fetch('tong hop chuyen de.txt'), fetch('Kiến thức chung.txt') ]);
+        if (!resSpec.ok || !resGen.ok) throw new Error("Not found");
         specializedData = JSON.parse(await resSpec.text()).topics || JSON.parse(await resSpec.text());
         generalData = JSON.parse(await resGen.text()).topics || JSON.parse(await resGen.text());
         localStorage.setItem('SPECIALIZED_DATA', JSON.stringify(specializedData));
