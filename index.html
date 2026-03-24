@@ -206,242 +206,374 @@
 
 <script>
 const ADMIN_SECRET = "Agribank@2026"; 
-const DATA_VERSION = "v2"; // 🔥 mỗi lần sửa TXT → đổi v3, v4...
 
-let specializedData = []; 
-let generalData = [];
-
-window.onload = async () => {
-    if(window.innerWidth < 768) setCompactMode(true);
-    updateUIAuth();
-
-    const DATA_VERSION = "v2"; // 🔥 đổi mỗi khi sửa file txt
-
-    const localSpec = localStorage.getItem('SPECIALIZED_DATA');
-    const localGen = localStorage.getItem('GENERAL_DATA');
-    const localVer = localStorage.getItem('DATA_VERSION');
-
-    // ✅ Nếu version giống → dùng cache
-    if (localSpec && localGen && localVer === DATA_VERSION) {
-        specializedData = JSON.parse(localSpec);
-        generalData = JSON.parse(localGen);
-        renderCategories();
-        showView('view-home');
-        return;
-    }
-
+// BỘ ĐẾM TOÀN CẦU DẠNG CHỮ
+async function initGlobalCounter() {
     try {
-        // ✅ THÊM ?v= để phá cache trình duyệt
-        const [resSpec, resGen] = await Promise.all([
-            fetch('tong hop cac chuyen de.txt?v=' + DATA_VERSION),
-            fetch('Kiến thức chung.txt?v=' + DATA_VERSION)
-        ]);
-
-        if (!resSpec.ok || !resGen.ok) throw new Error("Not found");
-
-        const textSpec = await resSpec.text();
-        const textGen = await resGen.text();
-
-        specializedData = JSON.parse(textSpec).topics || JSON.parse(textSpec);
-        generalData = JSON.parse(textGen).topics || JSON.parse(textGen);
-
-        // ✅ lưu cache + version
-        localStorage.setItem('SPECIALIZED_DATA', JSON.stringify(specializedData));
-        localStorage.setItem('GENERAL_DATA', JSON.stringify(generalData));
-        localStorage.setItem('DATA_VERSION', DATA_VERSION);
-
-        renderCategories();
-        showView('view-home');
-
+        const res = await fetch('https://api.counterapi.dev/v1/agribank/bacthaibinh2026/up');
+        const data = await res.json();
+        document.getElementById('visitCount').innerText = data.count;
+        document.getElementById('visitLabel').innerText = "Số lượt truy cập toàn hệ thống: ";
     } catch (e) {
-        showView('view-setup');
-    }
-};
-
-// ================= LOAD DATA (FIX CACHE FULL) =================
-async function loadData() {
-    const localSpec = localStorage.getItem('SPECIALIZED_DATA');
-    const localGen = localStorage.getItem('GENERAL_DATA');
-    const localVer = localStorage.getItem('DATA_VERSION');
-
-    // 👉 nếu version giống → dùng cache
-    if (localSpec && localGen && localVer === DATA_VERSION) {
-        specializedData = JSON.parse(localSpec);
-        generalData = JSON.parse(localGen);
-        renderCategories();
-        showView('view-home');
-        return;
-    }
-
-    try {
-        // 🔥 phá cache trình duyệt
-        const [resSpec, resGen] = await Promise.all([
-            fetch('tong hop cac chuyen de.txt?v=' + DATA_VERSION),
-            fetch('Kiến thức chung.txt?v=' + DATA_VERSION)
-        ]);
-
-        if (!resSpec.ok || !resGen.ok) throw new Error("Load fail");
-
-        const textSpec = await resSpec.text();
-        const textGen = await resGen.text();
-
-        specializedData = JSON.parse(textSpec).topics || JSON.parse(textSpec);
-        generalData = JSON.parse(textGen).topics || JSON.parse(textGen);
-
-        // 👉 lưu cache + version
-        localStorage.setItem('SPECIALIZED_DATA', JSON.stringify(specializedData));
-        localStorage.setItem('GENERAL_DATA', JSON.stringify(generalData));
-        localStorage.setItem('DATA_VERSION', DATA_VERSION);
-
-        renderCategories();
-        showView('view-home');
-
-    } catch (e) {
-        console.log("Lỗi load:", e);
-        showView('view-setup');
+        let localVisits = parseInt(localStorage.getItem('agri_local_visits') || '0') + 1;
+        localStorage.setItem('agri_local_visits', localVisits);
+        document.getElementById('visitCount').innerText = localVisits;
+        document.getElementById('visitLabel').innerText = "Số lượt ôn tập trên thiết bị (Offline): ";
     }
 }
+initGlobalCounter();
 
-// ================= FORCE UPDATE =================
-function forceReloadData(){
-    localStorage.clear();
-    location.reload();
+function utf8ToArray(s){ return new TextEncoder().encode(s); }
+async function hmac_sha256(keyStr, msgStr){
+    const key = await crypto.subtle.importKey('raw', utf8ToArray(keyStr), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+    const sig = await crypto.subtle.sign('HMAC', key, utf8ToArray(msgStr));
+    return Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+function digestToPassword(hex){
+    try {
+        const bi = BigInt('0x' + hex);
+        const base36 = bi.toString(36).toUpperCase();
+        const pool = (base36 + hex.toUpperCase()).replace(/[^A-Z0-9]/g,'').toUpperCase();
+        let pwd = pool.slice(0,8);
+        while(pwd.length < 8) pwd += pool;
+        return pwd.slice(0,8);
+    } catch(e){
+        return hex.toUpperCase().slice(0,8).padEnd(8,'0');
+    }
+}
+function getDeviceID() {
+    let did = localStorage.getItem('agri_device_id');
+    if (!did) {
+        did = 'AGRI-' + Math.random().toString(36).substring(2, 8).toUpperCase() + '-' + Date.now().toString(36).substring(4).toUpperCase();
+        localStorage.setItem('agri_device_id', did);
+    }
+    return did;
 }
 
-// ================= UI AUTH =================
 let isSearchUnlocked = localStorage.getItem('search_unlocked') === 'true';
 
 function updateUIAuth() {
     const btn = document.getElementById('btnLogin');
     if(isSearchUnlocked && btn) {
         btn.innerHTML = "<span>✅</span> Đã đăng nhập";
-        btn.className = "bg-green-600 text-white font-bold px-4 md:px-6 rounded-lg text-sm shadow-md flex items-center justify-center gap-2";
+        // Cập nhật giao diện nút khi đã đăng nhập
+        btn.className = "bg-green-600 text-white font-bold px-4 md:px-6 rounded-lg text-sm transition shadow-md w-full md:w-auto h-full min-h-[52px] flex items-center justify-center gap-2 cursor-default";
         btn.onclick = null;
     }
 }
 
-// ================= SEARCH =================
+function openUnlockModal() {
+    document.getElementById('modalDeviceId').value = getDeviceID();
+    document.getElementById('unlockCodeInput').value = '';
+    document.getElementById('unlockModal').classList.remove('hide');
+}
+function closeUnlockModal() { document.getElementById('unlockModal').classList.add('hide'); }
+function copyDeviceId() {
+    const t = document.getElementById('modalDeviceId').value;
+    navigator.clipboard?.writeText(t).then(()=> alert('Đã copy Mã thiết bị!'));
+}
+async function verifyAndUnlock() {
+    const inputCode = document.getElementById('unlockCodeInput').value.trim().toUpperCase();
+    if(!inputCode) return alert("Vui lòng nhập mã kích hoạt!");
+    try {
+        const hex = await hmac_sha256(ADMIN_SECRET, getDeviceID());
+        const expectedPwd = digestToPassword(hex);
+        if (inputCode === expectedPwd) {
+            localStorage.setItem('search_unlocked', 'true');
+            isSearchUnlocked = true;
+            alert("🎉 Đăng nhập thành công! Đã mở khóa tìm kiếm vô hạn.");
+            updateUIAuth(); closeUnlockModal();
+        } else alert("❌ Mã kích hoạt không chính xác!");
+    } catch(e) { alert("Lỗi hệ thống khi xác thực."); }
+}
+
 function handleSearch() {
     const input = document.getElementById('searchInput').value.trim();
     const resultDiv = document.getElementById('searchResults');
-
-    if (!input) {
-        resultDiv.innerHTML = '';
-        return;
-    }
-
+    if (!input) { resultDiv.className = "mt-4"; resultDiv.innerHTML = ''; return; }
     if (!isSearchUnlocked) {
         let count = parseInt(localStorage.getItem('search_count') || '0');
         if (count >= 5) {
-            alert("Hết lượt tìm kiếm. Đăng nhập để tiếp tục.");
-            return;
+            alert("Bạn đã hết 5 lượt tìm kiếm dùng thử. Vui lòng đăng nhập để tiếp tục.");
+            openUnlockModal(); return;
         }
         localStorage.setItem('search_count', count + 1);
     }
 
-    const keywords = input.toLowerCase().split(/\s+/);
-    let results = [];
-
+    const keywords = input.split(/\*|\s+/).map(k => k.trim().toLowerCase()).filter(k => k);
+    let allQs = [];
     [...specializedData, ...generalData].forEach(topic => {
-        topic.questions?.forEach(q => {
-            const text = (q.q + " " + q.choices.join(" ")).toLowerCase();
-            let score = keywords.filter(k => text.includes(k)).length;
-            if(score > 0) results.push({q, score});
-        });
+        if(topic.questions) topic.questions.forEach(q => allQs.push(q));
     });
 
-    results.sort((a,b)=>b.score-a.score);
+    let scoredMatches = [];
+    allQs.forEach(q => {
+        const fullText = (q.q + " " + q.choices.join(" ")).toLowerCase();
+        let matchCount = 0;
+        keywords.forEach(kw => { if(fullText.includes(kw)) matchCount++; });
+        if (matchCount > 0) scoredMatches.push({ q: q, pct: Math.round((matchCount / keywords.length) * 100) });
+    });
 
-    resultDiv.innerHTML = results.slice(0,20).map(r=>`
-        <div class="p-2 border rounded mb-2 bg-gray-50">
-            <b>${r.q.q}</b><br>
-            ${r.q.choices.map((c,i)=>`
-                <div ${i===r.q.answer?'style="color:green;font-weight:bold"':''}>
-                    ${String.fromCharCode(65+i)}. ${c}
+    scoredMatches.sort((a, b) => b.pct - a.pct);
+    const matches = scoredMatches.slice(0, 50);
+    resultDiv.className = "mt-4 grid grid-cols-1 md:grid-cols-3 gap-3 max-h-[60vh] overflow-y-auto p-1";
+
+    if (matches.length === 0) {
+        resultDiv.className = "mt-4";
+        resultDiv.innerHTML = '<p class="text-xs text-gray-500 italic p-2 text-center">Không có câu hỏi phù hợp.</p>';
+        return;
+    }
+
+    resultDiv.innerHTML = matches.map(item => {
+        const q = item.q, pct = item.pct;
+        let cardColor = "bg-gray-50 border-gray-200", pctBadge = "bg-gray-200 text-gray-700";
+        if (pct >= 80) { cardColor = "bg-[#fffbeb] border-[#fcd34d]"; pctBadge = "bg-[#fbbf24] text-white"; } 
+        else if (pct >= 60) { cardColor = "bg-[#ecfdf5] border-[#6ee7b7]"; pctBadge = "bg-[#10b981] text-white"; }
+        return `
+        <div class="p-2 border rounded-lg shadow-sm flex flex-col ${cardColor} text-[11px] hover:-translate-y-0.5 transition">
+            <div class="flex justify-between items-start mb-1.5 gap-2">
+                <p class="font-bold text-gray-800 leading-snug break-words">${q.q}</p>
+                <span class="px-1.5 py-0.5 rounded text-[9px] font-bold shrink-0 ${pctBadge}">${pct}%</span>
+            </div>
+            <div class="space-y-1 flex-1">
+                ${q.choices.map((c, cIdx) => `
+                    <div class="p-1.5 rounded border ${cIdx === q.answer ? 'bg-white border-green-500 font-bold text-green-700 shadow-sm' : 'bg-white/60 border-gray-200 text-gray-600'} leading-tight">
+                        ${String.fromCharCode(65 + cIdx)}. ${c}
+                    </div>
+                `).join('')}
+            </div>
+            <p class="mt-2 text-[9px] text-gray-500 italic shrink-0">💡 Nguồn: ${q.source || 'Lưu hành nội bộ'}</p>
+        </div>`;
+    }).join('');
+}
+
+const CATEGORIES = [
+    "1. Tín dụng KHDN", "2. Thẩm định", "3. Tín dụng KHCN", "4. Xử lý nợ", 
+    "5. Thanh toán quốc tế và Tài trợ thương mại", "6. Kế hoạch và Quản lý rủi ro", 
+    "7. Kế toán giao dịch nội bộ", "8. Kế toán giao dịch khách hàng", "9. Kiểm ngân", 
+    "10. Kiểm tra giám sát nội bộ", "11. Công nghệ thông tin", "12. Nhân sự - tiền lương", 
+    "13. Pháp chế", "14. Xây dựng cơ bản, quản trị hành chính", "15. Văn thư lễ tân", "Kiến thức chung"
+];
+
+const ICONS = ["🏭", "📋", "👨‍👩‍👧‍👦", "💼", "🚢", "🎯", "🗂️", "💳", "💰", "🕵️‍♂️", "🖥️", "👥", "⚖️", "🏢", "✉️", "💎"];
+
+let specializedData = []; let generalData = []; let appMode = ''; 
+let currentQs = []; let currentQIndex = 0; let userAnswers = {};
+let examTimer = null; let secondsRemaining = 45 * 60; let timeTaken = 0;
+
+window.onload = async () => {
+    if(window.innerWidth < 768) setCompactMode(true);
+    updateUIAuth();
+    const localSpec = localStorage.getItem('SPECIALIZED_DATA');
+    const localGen = localStorage.getItem('GENERAL_DATA');
+    if (localSpec && localGen) {
+        specializedData = JSON.parse(localSpec); generalData = JSON.parse(localGen);
+        renderCategories(); showView('view-home'); return;
+    }
+    try {
+        const [resSpec, resGen] = await Promise.all([ fetch('tong hop chuyen de.txt'), fetch('Kiến thức chung.txt') ]);
+        if (!resSpec.ok || !resGen.ok) throw new Error("Not found");
+        specializedData = JSON.parse(await resSpec.text()).topics || JSON.parse(await resSpec.text());
+        generalData = JSON.parse(await resGen.text()).topics || JSON.parse(await resGen.text());
+        localStorage.setItem('SPECIALIZED_DATA', JSON.stringify(specializedData));
+        localStorage.setItem('GENERAL_DATA', JSON.stringify(generalData));
+        renderCategories(); showView('view-home');
+    } catch (e) { showView('view-setup'); }
+};
+
+function setCompactMode(isCompact) {
+    const btnPC = document.getElementById('btnModePC'), btnMobile = document.getElementById('btnModeMobile');
+    if (isCompact) { document.body.classList.add('compact-mode'); btnMobile.classList.add('active'); btnPC.classList.remove('active'); } 
+    else { document.body.classList.remove('compact-mode'); btnPC.classList.add('active'); btnMobile.classList.remove('active'); }
+}
+
+async function saveManualFiles() {
+    const fSpec = document.getElementById('uploadSpec').files[0], fGen = document.getElementById('uploadGen').files[0];
+    if (!fSpec || !fGen) return alert("Chọn 2 file");
+    try {
+        const dSpec = JSON.parse(await fSpec.text()), dGen = JSON.parse(await fGen.text());
+        localStorage.setItem('SPECIALIZED_DATA', JSON.stringify(dSpec.topics||dSpec));
+        localStorage.setItem('GENERAL_DATA', JSON.stringify(dGen.topics||dGen));
+        alert("Thành công!"); location.reload();
+    } catch (e) { alert("Lỗi file"); }
+}
+
+function showView(viewId) {
+    ['view-loading', 'view-setup', 'view-home', 'view-exam', 'view-result'].forEach(id => document.getElementById(id).classList.add('hide'));
+    document.getElementById(viewId).classList.remove('hide');
+    document.getElementById('mainHeader').style.display = (viewId === 'view-exam') ? 'none' : 'block';
+    document.getElementById('mainFooter').classList.toggle('hide', viewId !== 'view-home');
+}
+
+function goHome() { clearInterval(examTimer); showView('view-home'); }
+
+function renderCategories() {
+    const grid = document.getElementById('categoriesGrid'); grid.innerHTML = '';
+    CATEGORIES.forEach((cat, index) => {
+        grid.innerHTML += `
+            <div class="bg-white border p-3 md:p-4 rounded-xl shadow-sm flex flex-col justify-between hover:shadow-md transition">
+                <div class="flex items-start gap-3 mb-3">
+                    <div class="flex items-center justify-center w-10 h-10 bg-red-50 rounded-lg text-2xl shrink-0 shadow-sm border border-red-100">${ICONS[index]}</div>
+                    <h3 class="font-bold text-gray-800 text-sm leading-snug">${cat}</h3>
                 </div>
-            `).join('')}
-        </div>
-    `).join('');
-}
-
-// ================= VIEW =================
-function showView(id){
-    ['view-loading','view-home','view-setup','view-exam','view-result']
-    .forEach(v=>document.getElementById(v)?.classList.add('hide'));
-    document.getElementById(id)?.classList.remove('hide');
-}
-
-// ================= CATEGORY =================
-function renderCategories(){
-    const grid = document.getElementById('categoriesGrid');
-    grid.innerHTML = specializedData.map(cat=>`
-        <div class="p-3 border rounded bg-white shadow">
-            <b>${cat.name}</b><br>
-            <button onclick="startPractice('${cat.name}')">Ôn tập</button>
-        </div>
-    `).join('');
-}
-
-// ================= PRACTICE =================
-let currentQs = [];
-let currentQIndex = 0;
-let userAnswers = {};
-
-function startPractice(cat){
-    const topic = [...specializedData,...generalData]
-        .find(t=>t.name.includes(cat));
-
-    if(!topic) return alert("Không có dữ liệu");
-
-    currentQs = topic.questions;
-    currentQIndex = 0;
-    userAnswers = {};
-
-    showView('view-exam');
-    renderQuestion();
-}
-
-function renderQuestion(){
-    const q = currentQs[currentQIndex];
-    if(!q) return;
-
-    document.getElementById('qContentText').innerText = q.q;
-
-    const box = document.getElementById('qOptionsContainer');
-    box.innerHTML = '';
-
-    q.choices.forEach((c,i)=>{
-        const btn = document.createElement('button');
-        btn.className = "opt-btn";
-        btn.innerText = `${String.fromCharCode(65+i)}. ${c}`;
-
-        btn.onclick = ()=>{
-            userAnswers[currentQIndex]=i;
-            renderQuestion();
-        }
-
-        if(userAnswers[currentQIndex]!==undefined){
-            btn.disabled = true;
-            if(i===q.answer) btn.style.background="lightgreen";
-            else if(i===userAnswers[currentQIndex]) btn.style.background="pink";
-        }
-
-        box.appendChild(btn);
+                <div class="flex gap-2 mt-auto">
+                    <button onclick="startPractice('${cat}')" class="flex-1 bg-blue-50 text-blue-700 font-bold py-2 rounded text-xs border border-blue-200 shadow-sm">📖 ÔN TẬP</button>
+                    ${index !== 15 ? `<button onclick="startExam('${cat}')" class="flex-1 bg-red-50 text-red-700 font-bold py-2 rounded text-xs border border-red-200 shadow-sm">⏱️ THI THỬ</button>` : ''}
+                </div>
+            </div>
+        `;
     });
 }
 
-function nextQuestion(){
-    if(currentQIndex < currentQs.length-1){
-        currentQIndex++;
-        renderQuestion();
+function extractQs(cat) {
+    const db = cat === "Kiến thức chung" ? generalData : specializedData;
+    const t = db.find(x => x.name.includes(cat) || cat.includes(x.name));
+    return t && t.questions ? [...t.questions] : [];
+}
+
+function buildRangeSelect() {
+    const sel = document.getElementById('rangeSelect');
+    sel.innerHTML = '';
+    const total = currentQs.length;
+    const step = 50;
+    for(let i=0; i<total; i+=step) {
+        let end = Math.min(i+step, total);
+        let opt = document.createElement('option');
+        opt.value = i; opt.text = `Câu ${i+1} - ${end}`;
+        sel.appendChild(opt);
     }
 }
 
-function prevQuestion(){
-    if(currentQIndex > 0){
-        currentQIndex--;
-        renderQuestion();
+function jumpToRange(index) { currentQIndex = parseInt(index); renderQuestion(); }
+
+function updateRangeSelect() {
+    if(appMode !== 'practice') return;
+    const sel = document.getElementById('rangeSelect');
+    if(!sel) return;
+    for(let i=0; i<sel.options.length; i++) {
+        let val = parseInt(sel.options[i].value), nextVal = val + 50;
+        if(currentQIndex >= val && currentQIndex < nextVal) { sel.value = val; break; }
     }
+}
+
+function startPractice(cat) {
+    currentQs = extractQs(cat); if(!currentQs.length) return alert("Lỗi dữ liệu");
+    appMode = 'practice'; currentQIndex = 0; userAnswers = {};
+    
+    document.getElementById('modeBadge').innerText = "ÔN TẬP";
+    document.getElementById('modeBadge').className = "font-bold text-blue-700 bg-blue-100 border-blue-200 text-[10px] md:text-xs px-2 py-0.5 rounded uppercase";
+    document.getElementById('catTitle').innerText = cat;
+    document.getElementById('sidebarGrid').classList.add('hide');
+    document.getElementById('btnSubmitExam').classList.add('hide');
+    document.getElementById('timerContainer').classList.add('hide');
+    
+    buildRangeSelect(); document.getElementById('rangeSelect').classList.remove('hide');
+    showView('view-exam'); renderQuestion();
+}
+
+function startExam(cat) {
+    let s = extractQs(cat).sort(()=>0.5-Math.random()).slice(0,75);
+    let g = extractQs("Kiến thức chung").sort(()=>0.5-Math.random()).slice(0,25);
+    currentQs = [...s,...g].sort(()=>0.5-Math.random());
+    appMode = 'exam'; currentQIndex = 0; userAnswers = {}; secondsRemaining = 45*60; timeTaken = 0;
+    
+    document.getElementById('modeBadge').innerText = "THI THỬ";
+    document.getElementById('modeBadge').className = "font-bold text-red-700 bg-red-100 border-red-200 text-[10px] md:text-xs px-2 py-0.5 rounded uppercase";
+    document.getElementById('catTitle').innerText = document.getElementById('catTitle').dataset.catName = cat;
+    document.getElementById('sidebarGrid').classList.remove('hide');
+    document.getElementById('btnSubmitExam').classList.remove('hide');
+    document.getElementById('timerContainer').classList.remove('hide');
+    
+    document.getElementById('rangeSelect').classList.add('hide');
+    buildNavGrid(); startTimer(); showView('view-exam'); renderQuestion();
+}
+
+function renderQuestion() {
+    if(!currentQs.length) return;
+    const q = currentQs[currentQIndex], hasAns = userAnswers[currentQIndex] !== undefined;
+    document.getElementById('qIndexText').innerText = currentQIndex + 1;
+    document.getElementById('qContentText').innerText = q.q;
+    document.getElementById('qSourceText').innerText = q.source || "Agribank";
+    document.getElementById('qExplanation').classList.add('hide');
+    
+    const cont = document.getElementById('qOptionsContainer'); cont.innerHTML = '';
+    q.choices.forEach((c, i) => {
+        const btn = document.createElement('button'); btn.className = 'opt-btn';
+        btn.innerHTML = `<span class="inline-block w-6 font-bold text-gray-500">${String.fromCharCode(65+i)}.</span> ${c}`;
+        if(hasAns) {
+            btn.disabled = true;
+            if(i === q.answer) btn.classList.add('opt-correct', 'correct-ans');
+            else if(i === userAnswers[currentQIndex]) btn.classList.add('opt-wrong', 'wrong-ans');
+        } else btn.onclick = () => selectOption(i);
+        cont.appendChild(btn);
+    });
+    if(hasAns && appMode !== 'exam') document.getElementById('qExplanation').classList.remove('hide');
+    updateGridUI(); updateRangeSelect();
+}
+
+function selectOption(i) {
+    userAnswers[currentQIndex] = i; const q = currentQs[currentQIndex];
+    document.querySelectorAll('.opt-btn').forEach((b, idx) => {
+        b.disabled = true;
+        if(idx === q.answer) b.classList.add('opt-correct', 'correct-ans');
+        else if(idx === i) b.classList.add('opt-wrong', 'wrong-ans');
+    });
+    if(appMode !== 'exam') document.getElementById('qExplanation').classList.remove('hide');
+    updateGridUI();
+}
+
+function prevQuestion() { if(currentQIndex > 0) { currentQIndex--; renderQuestion(); } }
+function nextQuestion() { if(currentQIndex < currentQs.length - 1) { currentQIndex++; renderQuestion(); } }
+
+function buildNavGrid() {
+    const g = document.getElementById('navGridContainer'); g.innerHTML = '';
+    currentQs.forEach((_, i) => {
+        const b = document.createElement('div'); b.className = 'nav-btn'; b.innerText = i+1;
+        b.onclick = () => { currentQIndex = i; renderQuestion(); };
+        g.appendChild(b);
+    });
+}
+
+function updateGridUI() {
+    if(appMode === 'practice') return;
+    document.querySelectorAll('.nav-btn').forEach((b, i) => {
+        b.className = 'nav-btn' + (i === currentQIndex ? ' active' : '');
+        const a = userAnswers[i];
+        if(a !== undefined) {
+            if(appMode === 'exam') b.classList.add('answered');
+            else b.classList.add(a === currentQs[i].answer ? 'correct' : 'wrong');
+        } else if(appMode === 'review') b.classList.add('unanswered');
+    });
+}
+
+function startTimer() {
+    clearInterval(examTimer);
+    examTimer = setInterval(() => {
+        secondsRemaining--; timeTaken++;
+        document.getElementById('timerText').innerText = `${Math.floor(secondsRemaining/60).toString().padStart(2,'0')}:${(secondsRemaining%60).toString().padStart(2,'0')}`;
+        if(secondsRemaining <= 0) { clearInterval(examTimer); submitExam(); }
+    }, 1000);
+}
+
+function submitExam() {
+    clearInterval(examTimer);
+    if(appMode === 'exam' && secondsRemaining > 0 && !confirm("Nộp bài sớm?")) { startTimer(); return; }
+    let c = 0, w = 0;
+    currentQs.forEach((q, i) => { if(userAnswers[i] === q.answer) c++; else if(userAnswers[i] !== undefined) w++; });
+    document.getElementById('resScore').innerText = Math.round((c/currentQs.length)*100);
+    document.getElementById('resCorrect').innerText = c; document.getElementById('resWrong').innerText = w;
+    document.getElementById('resTime').innerText = `${Math.floor(timeTaken/60).toString().padStart(2,'0')}:${(timeTaken%60).toString().padStart(2,'0')}`;
+    document.getElementById('resultCatName').innerText = document.getElementById('catTitle').dataset.catName;
+    showView('view-result');
+}
+
+function reviewExam() {
+    appMode = 'review'; currentQIndex = 0;
+    document.getElementById('modeBadge').innerText = "REVIEW";
+    document.getElementById('modeBadge').className = "font-bold text-gray-700 bg-gray-200 text-[10px] md:text-xs px-2 py-0.5 rounded border";
+    document.getElementById('btnSubmitExam').classList.add('hide'); document.getElementById('timerContainer').classList.add('hide');
+    document.getElementById('rangeSelect').classList.add('hide'); 
+    showView('view-exam'); renderQuestion();
 }
 </script>
 </body>
