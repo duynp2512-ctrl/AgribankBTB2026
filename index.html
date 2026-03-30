@@ -371,7 +371,7 @@ window.onload = async () => {
         renderCategories(); showView('view-home'); return;
     }
     try {
-        const [resSpec, resGen] = await Promise.all([ fetch('tong hop cac chuyen de.txt'), fetch('Kiến thức chung.txt') ]);
+        const [resSpec, resGen] = await Promise.all([ fetch("tong hop cac chuyen de.txt?v=" + Date.now()), fetch("Kiến thức chung.txt?v=" + Date.now()) ]);
         if (!resSpec.ok || !resGen.ok) throw new Error("Not found");
         specializedData = JSON.parse(await resSpec.text()).topics || JSON.parse(await resSpec.text());
         generalData = JSON.parse(await resGen.text()).topics || JSON.parse(await resGen.text());
